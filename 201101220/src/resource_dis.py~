@@ -1,0 +1,138 @@
+#!/bin/python
+import json
+import libvirt 
+import os
+pm_id = {}
+image_id  = {}
+pm_spec = {}
+pm_freespace = {}
+virtMachine_info = {}
+pmvm = {}
+architect_pm = {}
+virm_types = []
+file_type = ''
+i_id = 100
+imagefile=' '
+pmid=1000
+v=3256
+tpms=1000
+c_pmid=1000
+voli=3245
+VOLUME_LIST={}
+vol_size={}
+aord={}
+HOST_NAME='chitra-HP-Pavilion-g6-Notebook-PC'
+
+def assignVMid(pmid):
+	 global v
+	 print "here"
+	 v = v + 1
+	 if pmid not in pmvm:
+		pmvm[pmid] = []
+	 	pmvm[pmid].append(v)
+	 else:
+		pmvm[pmid].append(v)
+	 return v
+def getpm_spec(name,pmid):
+	global pm_spec
+	global pm_freespace
+	print name
+	p  = 'remote+ssh://'+name[0]+'@'+name[1]+'/system'
+	try:
+		connection = libvirt.open(p)
+	except:
+		print "Cannot open connection to machine",name[0]+'@'+name[1]
+		return
+	try:
+	 	os.system("ssh "+name[0]+'@'+name[1]+ " -C 'df -h --total | grep total' > disk")
+	 	os.system("ssh "+name[0]+'@'+name[1]+ " -C ' free -m | head -n2 | tail -n1 ' > sp1")
+	 	os.system("ssh "+name[0]+'@'+name[1]+ " -C ' nproc ' > cpu1")
+	 	os.system("ssh "+name[0]+'@'+name[1]+ " -C ' grep flags /proc/cpuinfo | grep \" lm \"' > hardware")
+	except Exception,e:
+		print str(e)
+		return
+	pm_info = connection.getInfo()
+	sp = open('disk')
+	content = sp.read()
+	content = content.split()
+	print content
+	sp.close()
+	de=open('sp1')
+	fram=de.read()
+	print fram.split()
+	print fram,fram.split()[3]
+	ram=int(fram.split()[3])
+	de.close()
+	de=open("cpu1")
+	cpu=int(de.read())
+	de.close()
+	o=open('hardware')
+	hardw=o.read()
+	if (hardw==''):
+		h=32
+	else: 
+		h=64 
+	o.close()
+	pm_spec[pmid]=[ram,cpu,int(content[1][:-1]),h]
+	pm_freespace[pmid]=[ram,cpu,int(content[1][:-1]),h]
+	print "MACHINE",pm_freespace[pmid],pmid
+
+def imagefile(fn):
+	imagefile=fn
+	global image_id
+	global i_id
+	f = open(fn,'r')
+	for lines in f.readlines():
+		lines1 = lines.split("\n")
+		lines = lines1[0]
+		path = lines.split(':')
+		user = path[0].split('@')
+		location = path[1].split('/')
+		final = [user,path[1],location[-1:]]
+		image_id[i_id] = final
+		i_id += 1
+	f.close()
+
+def mach(fn):
+	global pm_id
+	global pmid
+	f = open(fn,'r')
+	for l in f.readlines():
+		l1 = l.split('\n')
+		l = l1[0]
+		l = l.split('@')		
+		pm_id[pmid] = l
+		print "machid",pm_id[pmid]
+		getpm_spec(pm_id[pmid],pmid)
+		pmid += 1
+	f.close()
+	pmid=pmid-1
+	global tpms
+	global c_pmid
+	tpms=pmid
+	c_pmid=pmid
+	print pmid
+	pass
+
+def VMTYPES(instype):
+	global virm_types
+	global file_type
+	file_type = instype
+	f = open(instype)
+	yfile = json.load(f)
+	print yfile
+	yfile = yfile['types']
+	print "new",yfile
+	for x in yfile:
+		t_l = []
+		for y in x:
+			t_l.append(x[y])
+		virm_types.append(t_l) 
+	print virm_types
+
+
+def server_header(server,url):
+	server.send_response(200)
+	server.send_header("content-type","application/json")
+	server.end_headers()
+	pass
